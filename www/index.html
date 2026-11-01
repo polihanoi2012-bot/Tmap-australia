@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tmap">
+  <meta name="application-name" content="Tmap">
+  <title>Tmap - Tối ưu Lộ trình Úc</title>
+
+  <!-- Favicon & App Icon Tmap (SVG Vector sắc nét tuyệt đối trên mọi màn hình Android) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Cpath d='M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z' fill='%23ffffff'/%3E%3Cpath d='M186 156h140v38h-48v104h-44V194h-48v-38z' fill='%231d4ed8'/%3E%3Ccircle cx='356' cy='140' r='22' fill='%2310b981'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563eb'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Cpath d='M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z' fill='%23ffffff'/%3E%3Cpath d='M186 156h140v38h-48v104h-44V194h-48v-38z' fill='%231d4ed8'/%3E%3Ccircle cx='356' cy='140' r='22' fill='%2310b981'/%3E%3C/svg%3E" />
+
+  <!-- PWA Manifest cài đặt ứng dụng Tmap kèm Logo cho Android -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Tmap Australia Route Planner","short_name":"Tmap","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Cdefs%3E%3ClinearGradient id=%27g%27 x1=%270%25%27 y1=%270%25%27 x2=%27100%25%27 y2=%27100%25%27%3E%3Cstop offset=%270%25%27 stop-color=%27%232563eb%27/%3E%3Cstop offset=%27100%25%27 stop-color=%27%2306b6d4%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%27512%27 height=%27512%27 rx=%27115%27 fill=%27url(%23g)%27/%3E%3Cpath d=%27M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z%27 fill=%27%23ffffff%27/%3E%3Cpath d=%27M186 156h140v38h-48v104h-44V194h-48v-38z%27 fill=%27%231d4ed8%27/%3E%3Ccircle cx=%27356%27 cy=%27140%27 r=%2722%27 fill=%27%2310b981%27/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}' />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; user-select: none; }
+    #map { height: 100%; width: 100%; z-index: 1; }
+    .stop-pin {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: white; border-radius: 9999px;
+      width: 30px; height: 30px; display: flex; align-items: center;
+      justify-content: center; font-weight: 800; font-size: 13px;
+      border: 2.5px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.45);
+    }
+    .depot-pin { background: linear-gradient(135deg, #dc2626, #f97316); }
+    .done-pin { background: #16a34a; opacity: 0.75; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col font-sans">
+
+  <!-- THANH TRẠNG THÁI TRÊN CÙNG VỚI LOGO TMAP -->
+  <div class="bg-slate-900 px-3 py-2.5 border-b border-slate-800 flex items-center justify-between shrink-0 z-20 shadow-md">
+    <div class="flex items-center gap-2.5">
+      <!-- Logo Tmap SVG trực tiếp -->
+      <svg class="w-9 h-9 rounded-xl shadow-md shrink-0" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="tmapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb"/>
+            <stop offset="100%" stop-color="#06b6d4"/>
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="115" fill="url(#tmapGrad)"/>
+        <path d="M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z" fill="#ffffff"/>
+        <path d="M186 156h140v38h-48v104h-44V194h-48v-38z" fill="#1d4ed8"/>
+        <circle cx="356" cy="140" r="24" fill="#10b981"/>
+      </svg>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="text-base font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Tmap</h1>
+          <span class="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.2 rounded font-semibold">AU</span>
+        </div>
+        <p class="text-[11px] text-emerald-400 font-medium" id="summaryText">0 điểm • 0.0 km • 0 phút</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button onclick="useMyGPS()" class="bg-slate-800 active:bg-slate-700 border border-slate-700 text-cyan-400 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+        📍 GPS
+      </button>
+      <select id="cityPreset" onchange="changeCity()" class="bg-slate-800 text-xs border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200">
+        <option value="sydney">Sydney</option>
+        <option value="melbourne">Melbourne</option>
+        <option value="brisbane">Brisbane</option>
+        <option value="perth">Perth</option>
+        <option value="adelaide">Adelaide</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Ô TÌM KIẾM ĐỊA CHỈ ÚC -->
+  <div class="bg-slate-900/95 px-3 py-2 border-b border-slate-800 shrink-0 z-20">
+    <div class="flex gap-1.5">
+      <input id="addressInput" type="text" placeholder="Tìm địa chỉ Úc trên Tmap (VD: 159 Church St, Parramatta)..." 
+        class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+        onkeydown="if(event.key==='Enter') searchAddress()" />
+      <button onclick="searchAddress()" id="addBtn" class="bg-gradient-to-r from-blue-600 to-cyan-600 active:opacity-90 text-white px-4 py-2.5 rounded-xl text-sm font-bold shrink-0 shadow">
+        + Thêm
+      </button>
+    </div>
+  </div>
+
+  <!-- KHU VỰC BẢN ĐỒ NƯỚC ÚC -->
+  <div class="relative flex-1 min-h-[38%]">
+    <div id="map"></div>
+    <button onclick="loadSampleStops()" class="absolute bottom-3 right-3 z-[400] bg-slate-900/90 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-full text-xs font-medium shadow-lg active:scale-95">
+      🔄 Nạp 6 đơn mẫu
+    </button>
+  </div>
+
+  <!-- DANH SÁCH ĐIỂM GIAO HÀNG TMAP -->
+  <div class="h-[46%] bg-slate-900 border-t-2 border-slate-800 flex flex-col shrink-0 z-20 rounded-t-2xl shadow-2xl">
+    <div class="px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+      <span class="font-medium text-slate-300">Lộ trình Tmap của bạn</span>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-1 text-slate-300">
+          <input type="checkbox" id="roundTripToggle" checked class="rounded bg-slate-800 border-slate-600 text-blue-500" />
+          Khứ hồi
+        </label>
+        <button onclick="clearAllStops()" class="text-rose-400 font-semibold">Xóa hết</button>
+      </div>
+    </div>
+
+    <div id="stopsList" class="flex-1 overflow-y-auto p-2.5 space-y-2"></div>
+
+    <!-- Nút Tối ưu lộ trình Tmap -->
+    <div class="p-3 bg-slate-950 border-t border-slate-800">
+      <button onclick="optimizeRoute()" id="optimizeBtn" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 active:opacity-90 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm">
+        ⚡ TỐI ƯU LỘ TRÌNH TMAP NGAY
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const CITIES = {
+      sydney: { lat: -33.8688, lng: 151.2093, zoom: 11, samples: [
+        { name: "Kho Tmap: Alexandria Depot, NSW", lat: -33.9096, lng: 151.1924 },
+        { name: "Bondi Junction Westfield, NSW", lat: -33.8916, lng: 151.2507 },
+        { name: "Chatswood Chase, NSW", lat: -33.7960, lng: 151.1860 },
+        { name: "Marrickville Metro, NSW", lat: -33.9048, lng: 151.1613 },
+        { name: "Sydney Fish Market, Pyrmont NSW", lat: -33.8727, lng: 151.1927 },
+        { name: "Newtown King Street, NSW", lat: -33.8972, lng: 151.1793 }
+      ]},
+      melbourne: { lat: -37.8136, lng: 144.9631, zoom: 11, samples: [
+        { name: "Kho Tmap: Port Melbourne, VIC", lat: -37.8340, lng: 144.9350 },
+        { name: "Queen Victoria Market, VIC", lat: -37.8076, lng: 144.9568 },
+        { name: "St Kilda Esplanade, VIC", lat: -37.8675, lng: 144.9740 },
+        { name: "Footscray Market, VIC", lat: -37.8012, lng: 144.9028 },
+        { name: "Richmond Bridge Rd, VIC", lat: -37.8183, lng: 145.0018 }
+      ]},
+      brisbane: { lat: -27.4698, lng: 153.0251, zoom: 11, samples: [
+        { name: "Kho Tmap: Woolloongabba, QLD", lat: -27.4910, lng: 153.0380 },
+        { name: "Queen Street Mall, Brisbane CBD", lat: -27.4698, lng: 153.0251 },
+        { name: "New Farm Park, QLD", lat: -27.4695, lng: 153.0528 },
+        { name: "Toowong Village, QLD", lat: -27.4852, lng: 152.9926 }
+      ]},
+      perth: { lat: -31.9505, lng: 115.8605, zoom: 11, samples: [
+        { name: "Kho Tmap: Welshpool Depot, WA", lat: -31.9880, lng: 115.9320 },
+        { name: "Perth CBD Hay Street, WA", lat: -31.9535, lng: 115.8570 },
+        { name: "Subiaco Rokeby Road, WA", lat: -31.9472, lng: 115.8239 }
+      ]},
+      adelaide: { lat: -34.9285, lng: 138.6007, zoom: 11, samples: [
+        { name: "Kho Tmap: Mile End, SA", lat: -34.9260, lng: 138.5720 },
+        { name: "Rundle Mall, Adelaide CBD", lat: -34.9229, lng: 138.6042 },
+        { name: "Glenelg Jetty Rd, SA", lat: -34.9806, lng: 138.5130 }
+      ]}
+    };
+
+    let map = L.map('map', { zoomControl: false }).setView([CITIES.sydney.lat, CITIES.sydney.lng], CITIES.sydney.zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© Tmap AU | OSM' }).addTo(map);
+
+    let stops = JSON.parse(localStorage.getItem('tmap_au_stops') || '[]');
+    let markers = [];
+    let routeLayer = null;
+    let totalKm = '0.0';
+    let totalMins = 0;
+
+    map.on('click', async function(e) {
+      const { lat, lng } = e.latlng;
+      let label = `Điểm ghim (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        if (data && data.display_name) label = data.display_name.split(',').slice(0, 3).join(',');
+      } catch (err) {}
+      addStop(label, lat, lng);
+    });
+
+    function useMyGPS() {
+      if (!navigator.geolocation) {
+        alert('Điện thoại của bạn chưa bật định vị GPS.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        let name = "Vị trí GPS hiện tại của tôi";
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          if (data && data.display_name) name = "📍 GPS: " + data.display_name.split(',').slice(0, 2).join(',');
+        } catch (e) {}
+        stops.unshift({ id: Date.now(), name, lat: latitude, lng: longitude, done: false });
+        map.setView([latitude, longitude], 14);
+        saveAndRender();
+      }, () => {
+        alert('Vui lòng cấp quyền vị trí GPS cho ứng dụng Tmap.');
+      }, { enableHighAccuracy: true });
+    }
+
+    function changeCity() {
+      const city = CITIES[document.getElementById('cityPreset').value];
+      map.setView([city.lat, city.lng], city.zoom);
+      loadSampleStops();
+    }
+
+    function loadSampleStops() {
+      stops = [];
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+      const cityKey = document.getElementById('cityPreset').value;
+      CITIES[cityKey].samples.forEach(s => stops.push({ id: Date.now() + Math.random(), name: s.name, lat: s.lat, lng: s.lng, done: false }));
+      saveAndRender();
+    }
+
+    async function searchAddress() {
+      const input = document.getElementById('addressInput');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const btn = document.getElementById('addBtn');
+      btn.innerText = '...';
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&limit=1&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const item = data[0];
+          const shortName = item.display_name.split(',').slice(0, 3).join(',');
+          addStop(shortName, parseFloat(item.lat), parseFloat(item.lon));
+          map.setView([parseFloat(item.lat), parseFloat(item.lon)], 14);
+          input.value = '';
+          input.blur();
+        } else {
+          alert('Không tìm thấy địa chỉ này tại Úc. Hãy nhập kèm tên vùng (Suburb) hoặc bang (NSW, VIC, QLD...).');
+        }
+      } catch (e) {
+        alert('Lỗi kết nối khi tìm địa chỉ.');
+      }
+      btn.innerText = '+ Thêm';
+    }
+
+    function addStop(name, lat, lng) {
+      stops.push({ id: Date.now() + Math.random(), name, lat, lng, done: false });
+      saveAndRender();
+    }
+
+    function toggleDone(idx) {
+      stops[idx].done = !stops[idx].done;
+      saveAndRender();
+    }
+
+    function removeStop(idx) {
+      stops.splice(idx, 1);
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+      saveAndRender();
+    }
+
+    function clearAllStops() {
+      stops = [];
+      totalKm = '0.0';
+      totalMins = 0;
+      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+      saveAndRender();
+    }
+
+    async function optimizeRoute() {
+      if (stops.length < 2) {
+        alert('Cần ít nhất 2 điểm dừng để Tmap tối ưu lộ trình!');
+        return;
+      }
+      const btn = document.getElementById('optimizeBtn');
+      btn.innerText = '⏳ TMAP ĐANG TÍNH ĐƯỜNG ĐI NGẮN NHẤT...';
+
+      const coords = stops.map(s => `${s.lng},${s.lat}`).join(';');
+      const roundtrip = document.getElementById('roundTripToggle').checked;
+      const destParam = roundtrip ? 'any' : 'last';
+      const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=${roundtrip}&source=first&destination=${destParam}&geometries=geojson&overview=full`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.code === 'Ok' && data.trips && data.trips.length > 0) {
+          const trip = data.trips[0];
+          const reordered = new Array(stops.length);
+          data.waypoints.forEach((wp, origIdx) => {
+            reordered[wp.waypoint_index] = stops[origIdx];
+          });
+          stops = reordered;
+
+          if (routeLayer) map.removeLayer(routeLayer);
+          routeLayer = L.geoJSON(trip.geometry, {
+            style: { color: '#06b6d4', weight: 5, opacity: 0.9 }
+          }).addTo(map);
+          map.fitBounds(routeLayer.getBounds(), { padding: [25, 25] });
+
+          totalKm = (trip.distance / 1000).toFixed(1);
+          totalMins = Math.round(trip.duration / 60) + (stops.length - 1) * 5;
+          saveAndRender();
+        } else {
+          alert('Không tính được đường đi giữa các điểm này.');
+        }
+      } catch (err) {
+        alert('Lỗi kết nối máy chủ định tuyến Tmap.');
+      }
+      btn.innerText = '⚡ TỐI ƯU LỘ TRÌNH TMAP NGAY';
+    }
+
+    function saveAndRender() {
+      localStorage.setItem('tmap_au_stops', JSON.stringify(stops));
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+
+      document.getElementById('summaryText').innerText = `${stops.length} điểm • ${totalKm} km • ~${totalMins} phút`;
+      const listEl = document.getElementById('stopsList');
+      listEl.innerHTML = '';
+
+      stops.forEach((s, idx) => {
+        const isDepot = idx === 0;
+        const pinClass = isDepot ? 'stop-pin depot-pin' : (s.done ? 'stop-pin done-pin' : 'stop-pin');
+        const icon = L.divIcon({
+          className: '',
+          html: `<div class="${pinClass}">${isDepot ? 'T' : idx}</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+
+        const marker = L.marker([s.lat, s.lng], { icon }).addTo(map).bindPopup(`<b>#${idx}: ${s.name}</b>`);
+        markers.push(marker);
+
+        const gmapsFallback = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`;
+        const wazeNav = `https://waze.com/ul?ll=${s.lat},${s.lng}&navigate=yes`;
+
+        const card = document.createElement('div');
+        card.className = `p-2.5 rounded-xl border ${s.done ? 'bg-slate-900/40 border-slate-800 opacity-55' : 'bg-slate-800/90 border-slate-700'} flex items-center justify-between gap-2`;
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5 overflow-hidden" onclick="map.setView([${s.lat}, ${s.lng}], 15)">
+            <span class="${pinClass} shrink-0">${isDepot ? 'T' : idx}</span>
+            <div class="truncate">
+              <div class="text-xs font-bold ${s.done ? 'line-through text-slate-400' : 'text-white'} truncate">${s.name}</div>
+              <div class="text-[10px] text-slate-400">${isDepot ? 'Kho xuất phát Tmap (Depot)' : 'Chạm để xem • Dừng ~5p'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <a href="${gmapsFallback}" target="_blank" class="bg-blue-600 active:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold">
+              Maps ↗
+            </a>
+            <a href="${wazeNav}" target="_blank" class="bg-cyan-600/30 text-cyan-300 border border-cyan-600/40 px-2 py-1.5 rounded-lg text-xs font-semibold">
+              Waze
+            </a>
+            <button onclick="toggleDone(${idx})" class="bg-emerald-600/20 text-emerald-300 border border-emerald-600/40 px-2.5 py-1.5 rounded-lg text-xs font-bold">
+              ✓
+            </button>
+            <button onclick="removeStop(${idx})" class="text-slate-400 px-1.5 py-1.5 text-xs">
+              ✕
+            </button>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    if (stops.length === 0) loadSampleStops();
+    else saveAndRender();
+  </script>
+</body>
+</html>
