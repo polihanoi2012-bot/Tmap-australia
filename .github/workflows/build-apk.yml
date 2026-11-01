@@ -18,16 +18,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: 3. Cài đặt Java JDK 21
+      - name: 3. Cài đặt Java JDK 21 (Khớp 100% với Capacitor 6)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: 4. Cài đặt chuẩn Android SDK cho Gradle
-        uses: android-actions/setup-android@v3
-
-      - name: 5. Tạo cấu hình Capacitor và đóng gói APK
+      - name: 4. Tạo cấu hình Capacitor và đóng gói APK
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           mkdir -p www
           if [ -f "index.html" ] && [ ! -f "www/index.html" ]; then
@@ -42,12 +42,13 @@ jobs:
           echo '{"appId":"au.com.tmap.app","appName":"Tmap","webDir":"www"}' > capacitor.config.json
           npx cap add android
           npx cap sync android
+          echo "sdk.dir=/usr/local/lib/android/sdk" > android/local.properties
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../Tmap-Australia.apk
 
-      - name: 6. Xuất file Tmap-Australia.apk
+      - name: 5. Xuất file Tmap-Australia.apk
         uses: actions/upload-artifact@v4
         with:
           name: Tmap-Android-APK
