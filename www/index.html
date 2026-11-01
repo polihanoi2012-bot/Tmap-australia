@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Tmap Pro - Australia Route Planner</title>
+  <title>Tmap Pro - Multi-Route Manager</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -22,816 +22,180 @@
     }
     .depot-pin { background: linear-gradient(135deg, #ea580c, #dc2626); }
     .asap-pin { background: linear-gradient(135deg, #e11d48, #f43f5e); }
-    .active-pin {
-      background: #10b981; transform: scale(1.25);
-      border: 3px solid #fef08a; box-shadow: 0 0 15px rgba(16,185,129,0.9);
-    }
+    .active-pin { background: #10b981; transform: scale(1.3); border: 3px solid #fef08a; box-shadow: 0 0 15px rgba(16,185,129,0.9); }
     .done-pin { background: #16a34a; opacity: 0.55; }
-    .failed-pin { background: #64748b; opacity: 0.65; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen w-screen overflow-hidden flex flex-col">
 
-  <!-- HEADER CHÍNH -->
-  <div class="bg-slate-900 px-3 py-2 border-b border-slate-800 flex items-center justify-between shrink-0 z-30">
-    <div class="flex items-center gap-2">
-      <svg class="w-9 h-9 rounded-xl shadow shrink-0" viewBox="0 0 512 512">
-        <defs>
-          <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#06b6d4"/>
-          </linearGradient>
-        </defs>
-        <rect width="512" height="512" rx="115" fill="url(#tg)"/>
-        <path d="M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z" fill="#fff"/>
-        <path d="M186 156h140v38h-48v104h-44V194h-48v-38z" fill="#1d4ed8"/>
-        <circle cx="356" cy="140" r="24" fill="#10b981"/>
-      </svg>
+  <!-- HEADER -->
+  <div id="appHeader" class="bg-slate-900 px-3 py-2 border-b border-slate-800 flex items-center justify-between shrink-0 z-30">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="openRoutesDrawer()">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-extrabold text-white text-sm shadow">T</div>
       <div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-base font-extrabold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Tmap</span>
-          <span class="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded font-bold">PRO AU</span>
+        <div class="flex items-center gap-1">
+          <span class="text-sm font-extrabold text-white" id="currentRouteTitle">Macquarie (Sydney)</span>
+          <span class="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded font-bold">▼ Vùng</span>
         </div>
-        <p class="text-[11px] text-emerald-400 font-semibold" id="summaryText">0 điểm • 0.0 km</p>
+        <p class="text-[10px] text-slate-400" id="summaryText">0 điểm • 0.0 km</p>
       </div>
     </div>
-
     <div class="flex items-center gap-1.5">
-      <button onclick="useMyGPS()" class="bg-slate-800 active:bg-slate-700 border border-slate-700 text-cyan-400 px-2.5 py-1.5 rounded-lg text-xs font-bold">
-        📍 GPS
-      </button>
-      <button onclick="openSettingsModal()" class="bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold">
-        ⚙️ Cài đặt
-      </button>
+      <button onclick="openRoutesDrawer()" class="bg-blue-600/20 border border-blue-500/40 text-blue-300 px-2.5 py-1.5 rounded-lg text-xs font-bold">📂 Tuyến</button>
+      <button onclick="useMyGPS()" class="bg-slate-800 border border-slate-700 text-cyan-400 px-2 py-1.5 rounded-lg text-xs font-bold">📍 GPS</button>
     </div>
   </div>
 
-  <!-- Ô TÌM KIẾM ĐỊA CHỈ ÚC KÈM AUTOCOMPLETE TRỰC TIẾP (ẨN KHI ĐANG CHẠY LỘ TRÌNH) -->
+  <!-- Ô TÌM KIẾM ĐỊA CHỈ -->
   <div id="searchBarContainer" class="bg-slate-900 px-3 py-2 border-b border-slate-800 shrink-0 z-30 relative">
     <div class="flex gap-1.5">
       <div class="relative flex-1">
-        <input id="addressInput" type="text" autocomplete="off"
-          placeholder="Gõ địa chỉ Úc (VD: 16 Williamson...)"
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-          oninput="handleAutocomplete(this.value)"
-          onkeydown="if(event.key==='Enter') searchAddress()" />
-        <button onclick="document.getElementById('addressInput').value=''; hideSuggestions();" class="absolute right-2.5 top-2.5 text-slate-500 text-sm">✕</button>
+        <input id="addressInput" type="text" autocomplete="off" placeholder="Gõ địa chỉ Úc (VD: Minto, Macquarie...)"
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+          oninput="handleAutocomplete(this.value)" onkeydown="if(event.key==='Enter') searchAddress()" />
+        <button onclick="document.getElementById('addressInput').value=''; hideSuggestions();" class="absolute right-2.5 top-2 text-slate-500">✕</button>
       </div>
-      <button onclick="searchAddress()" id="addBtn" class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-3.5 py-2.5 rounded-xl text-sm font-bold shrink-0">
-        + Thêm
-      </button>
-      <button onclick="openBulkModal()" title="Nhập hàng loạt" class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-2.5 rounded-xl text-xs font-bold shrink-0">
-        📋 Dán
-      </button>
+      <button onclick="searchAddress()" id="addBtn" class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-3 py-2 rounded-xl text-xs font-bold shrink-0">+ Thêm</button>
+      <button onclick="openBulkModal()" class="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-2 rounded-xl text-xs font-bold shrink-0">📋 Dán</button>
     </div>
-    <!-- Danh sách gợi ý địa chỉ thông minh (Dropdown) -->
-    <div id="suggestionsBox" class="hidden absolute left-3 right-3 top-14 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-50 divide-y divide-slate-800"></div>
+    <div id="suggestionsBox" class="hidden absolute left-3 right-3 top-12 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-slate-800"></div>
   </div>
 
-  <!-- BẢN ĐỒ TƯƠNG TÁC -->
-  <div class="relative flex-1 min-h-[34%]">
+  <!-- BẢN ĐỒ FULLSCREEN -->
+  <div class="relative flex-1 w-full">
     <div id="map"></div>
-    <!-- Tiến độ giao hàng nổi trên bản đồ khi đang chạy lộ trình -->
-    <div id="activeProgressBanner" class="hidden absolute top-2.5 left-3 right-3 z-[400] bg-slate-900/95 border border-emerald-500/40 rounded-xl p-2.5 shadow-xl flex items-center justify-between">
-      <div>
-        <div class="text-[11px] text-emerald-400 font-bold uppercase tracking-wider">Đang chạy lộ trình Tmap</div>
-        <div id="progressStats" class="text-xs text-white font-semibold">Đã xong: 0/0 điểm • Kết thúc lúc --:--</div>
+    <div id="activeProgressBanner" class="hidden absolute top-2 left-2 right-2 z-[400] bg-slate-900/95 border border-emerald-500/50 rounded-xl p-2 shadow-2xl flex items-center justify-between">
+      <div class="truncate pr-2">
+        <div class="text-[10px] text-emerald-400 font-extrabold uppercase">🧭 Tmap In-App Navigation</div>
+        <div id="progressStats" class="text-xs text-white font-bold truncate">Đang tới điểm #1 • ETA --:--</div>
       </div>
-      <button onclick="stopActiveRoute()" class="bg-rose-600/20 border border-rose-500/40 text-rose-300 px-2.5 py-1 rounded-lg text-xs font-bold">
-        Kết thúc
-      </button>
+      <button onclick="stopActiveRoute()" class="bg-rose-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold shrink-0">Thoát</button>
     </div>
-
     <button id="sampleBtn" onclick="loadSampleStops()" class="absolute bottom-3 right-3 z-[400] bg-slate-900/90 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
-      🔄 Nạp 6 đơn mẫu
+      🔄 Nạp mẫu vùng này
     </button>
   </div>
 
-  <!-- ==================== CHẾ ĐỘ 1: LẬP KẾ HOẠCH (PLANNING DRAWER) ==================== -->
-  <div id="planningPanel" class="h-[48%] bg-slate-900 border-t-2 border-slate-800 flex flex-col shrink-0 z-20 rounded-t-2xl shadow-2xl">
+  <!-- LẬP KẾ HOẠCH -->
+  <div id="planningPanel" class="h-[44%] bg-slate-900 border-t-2 border-slate-800 flex flex-col shrink-0 z-20 rounded-t-2xl shadow-2xl">
     <div class="px-3.5 py-2 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
-      <span class="font-semibold text-slate-300">Danh sách điểm dừng (Chạm để sửa chi tiết)</span>
+      <span class="font-semibold text-slate-300">Điểm dừng trong vùng (Chạm để sửa)</span>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-1 text-slate-300">
-          <input type="checkbox" id="roundTripToggle" checked onchange="isOptimized=false; updateMainActionBtn();" class="rounded bg-slate-800 border-slate-600 text-blue-500" />
+          <input type="checkbox" id="roundTripToggle" checked onchange="isOptimized=false; updateMainActionBtn();" class="rounded bg-slate-800 text-blue-500" />
           Khứ hồi
         </label>
         <button onclick="clearAllStops()" class="text-rose-400 font-bold">Xóa hết</button>
       </div>
     </div>
-
-    <div id="stopsList" class="flex-1 overflow-y-auto p-2.5 space-y-2"></div>
-
-    <!-- Thanh Nút Hành Động Kép: Tối ưu lộ trình HOẶC Bắt đầu chạy lộ trình -->
-    <div class="p-3 bg-slate-950 border-t border-slate-800 flex gap-2">
-      <button onclick="optimizeRoute()" id="optimizeBtn" class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 active:opacity-90 text-white font-extrabold py-3.5 px-3 rounded-xl shadow-lg flex items-center justify-center gap-1.5 text-sm">
-        ⚡ TỐI ƯU LỘ TRÌNH
+    <div id="stopsList" class="flex-1 overflow-y-auto p-2 space-y-1.5"></div>
+    <div class="p-2.5 bg-slate-950 border-t border-slate-800 flex gap-2">
+      <button onclick="optimizeRoute()" id="optimizeBtn" class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-extrabold py-3 px-3 rounded-xl shadow text-xs">
+        ⚡ TỐI ƯU LỘ TRÌNH VÙNG NÀY
       </button>
-      <button onclick="startActiveRoute()" id="startRouteBtn" class="hidden flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 active:opacity-90 text-white font-extrabold py-3.5 px-3 rounded-xl shadow-lg flex items-center justify-center gap-1.5 text-sm animate-pulse">
+      <button onclick="startActiveRoute()" id="startRouteBtn" class="hidden flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold py-3 px-3 rounded-xl shadow text-xs animate-pulse">
         🚀 BẮT ĐẦU CHẠY (START)
       </button>
     </div>
   </div>
 
-  <!-- ==================== CHẾ ĐỘ 2: ĐANG CHẠY LỘ TRÌNH (ACTIVE EXECUTION PANEL GIỐNG SPOKE) ==================== -->
-  <div id="executionPanel" class="hidden h-[50%] bg-slate-900 border-t-2 border-emerald-500/60 flex flex-col justify-between shrink-0 z-20 rounded-t-2xl shadow-2xl p-3.5">
-    
-    <!-- Thanh điều hướng Qua lại giữa các điểm dừng -->
-    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-      <button onclick="stepActiveStop(-1)" class="bg-slate-800 text-slate-300 px-3 py-1 rounded-lg text-xs font-bold">◀ Điểm trước</button>
-      <span id="activeStopBadge" class="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full">
-        ĐIỂM DỪNG #1 / 6
-      </span>
-      <button onclick="stepActiveStop(1)" class="bg-slate-800 text-slate-300 px-3 py-1 rounded-lg text-xs font-bold">Điểm kế ▶</button>
-    </div>
-
-    <!-- Thông tin chi tiết Điểm Đang Giao -->
-    <div class="my-auto py-1 space-y-2">
-      <div class="flex items-start justify-between gap-2">
-        <div>
-          <h2 id="execStopName" class="text-base font-extrabold text-white leading-snug">Đang tải...</h2>
-          <p id="execStopEta" class="text-xs text-cyan-400 font-semibold mt-0.5">⏰ Dự kiến đến (ETA): --:-- • Dừng 5 phút</p>
-        </div>
-        <button onclick="openEditStopModal(activeStopIndex)" class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-bold shrink-0">
-          ✏️ Sửa
-        </button>
-      </div>
-
-      <!-- Thẻ thông tin Gói hàng / Vị trí trên xe / Ghi chú giống Spoke -->
-      <div class="grid grid-cols-3 gap-1.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs">
-        <div>
-          <span class="text-slate-500 block text-[10px]">ĐỘ ƯU TIÊN</span>
-          <span id="execPriority" class="font-bold text-rose-400">🔥 Gấp (ASAP)</span>
-        </div>
-        <div>
-          <span class="text-slate-500 block text-[10px]">VỊ TRÍ TRÊN XE</span>
-          <span id="execPlace" class="font-bold text-amber-300">📦 Thùng sau</span>
-        </div>
-        <div>
-          <span class="text-slate-500 block text-[10px]">KHUNG GIỜ</span>
-          <span id="execWindow" class="font-bold text-slate-200">Cả ngày</span>
-        </div>
-      </div>
-
-      <div id="execNotesBox" class="bg-amber-500/10 border border-amber-500/30 text-amber-200 px-3 py-1.5 rounded-lg text-xs">
-        📝 Ghi chú: Không có ghi chú
+  <!-- DẪN ĐƯỜNG TRỰC TIẾP TRÊN APP -->
+  <div id="executionPanel" class="hidden h-[38%] bg-slate-900 border-t-2 border-emerald-500 flex flex-col justify-between shrink-0 z-20 rounded-t-2xl shadow-2xl p-3">
+    <div class="bg-slate-950 border border-emerald-500/40 rounded-xl p-2.5 flex items-center gap-3 shadow-inner">
+      <div id="navTurnIcon" class="text-2xl shrink-0 bg-emerald-500/20 w-10 h-10 rounded-xl flex items-center justify-center">⬆️</div>
+      <div class="overflow-hidden">
+        <div id="navInstruction" class="text-xs font-bold text-emerald-400 truncate">Tiếp tục đi thẳng theo đường chính</div>
+        <div id="navSubInstruction" class="text-[10px] text-slate-400 truncate">Khoảng cách chặng: ~1.2 km</div>
       </div>
     </div>
-
-    <!-- Cụm nút Hành động Lái xe & Xác nhận Giao hàng -->
-    <div class="space-y-2 pt-1">
-      <div class="flex gap-2">
-        <button onclick="launchNavigation()" class="flex-1 bg-blue-600 active:bg-blue-700 text-white font-extrabold py-3 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 text-sm">
-          🧭 DẪN ĐƯỜNG TỚI ĐIỂM NÀY
-        </button>
-        <button onclick="callCustomer()" id="execCallBtn" class="bg-slate-800 border border-slate-700 text-cyan-400 px-3.5 py-3 rounded-xl font-bold text-sm" title="Gọi khách">
-          📞
-        </button>
-        <button onclick="smsCustomer()" class="bg-slate-800 border border-slate-700 text-emerald-400 px-3.5 py-3 rounded-xl font-bold text-sm" title="Nhắn SMS báo khách">
-          💬
-        </button>
-      </div>
-
-      <div class="grid grid-cols-3 gap-2">
-        <button onclick="completeCurrentStop('done')" class="col-span-2 bg-emerald-600 active:bg-emerald-700 text-white font-extrabold py-3 rounded-xl shadow text-sm flex items-center justify-center gap-1.5">
-          ✅ ĐÃ GIAO XONG (TIẾP TỤC)
-        </button>
-        <button onclick="completeCurrentStop('failed')" class="bg-rose-600/25 border border-rose-500/40 text-rose-300 font-bold py-3 rounded-xl text-xs">
-          ❌ Giao lỗi / Bỏ qua
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 1: CHỈNH SỬA CHI TIẾT ĐƠN HÀNG (GIỐNG SPOKE STOP DETAILS) -->
-  <div id="stopModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-end justify-center">
-    <div class="bg-slate-900 w-full max-w-md rounded-t-2xl border-t border-slate-700 p-4 space-y-3">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h3 class="font-extrabold text-sm text-white" id="modalStopTitle">Chi tiết điểm dừng</h3>
-        <button onclick="closeStopModal()" class="text-slate-400 text-lg">✕</button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2.5 text-xs">
-        <div>
-          <label class="text-slate-400 block mb-1">Độ ưu tiên đơn</label>
-          <select id="modalPriority" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
-            <option value="normal">Bình thường</option>
-            <option value="asap">🔥 Gấp (Ưu tiên đi đầu)</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-slate-400 block mb-1">Vị trí hàng trong xe</label>
-          <select id="modalPackagePlace" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
-            <option value="Thùng sau">📦 Thùng sau</option>
-            <option value="Ghế phụ">💺 Ghế phụ phía trước</option>
-            <option value="Cốp xe">🚗 Cốp xe</option>
-            <option value="Kệ trái">⬅️ Kệ bên trái</option>
-            <option value="Kệ phải">➡️ Kệ bên phải</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-slate-400 block mb-1">Khung giờ khách nhận</label>
-          <input id="modalTimeWindow" type="text" placeholder="VD: 09:00 - 12:00" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white" />
-        </div>
-        <div>
-          <label class="text-slate-400 block mb-1">SĐT khách hàng (Úc)</label>
-          <input id="modalPhone" type="tel" placeholder="VD: 0412 345 678" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white" />
-        </div>
-      </div>
-
-      <div class="text-xs">
-        <label class="text-slate-400 block mb-1">Ghi chú giao hàng / Mã cổng (Gate Code)</label>
-        <input id="modalNotes" type="text" placeholder="VD: Bấm chuông #102, để hàng trước cửa..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white" />
-      </div>
-
-      <div class="flex gap-2 pt-2">
-        <button onclick="saveStopModal()" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm">Lưu thông tin</button>
-        <button onclick="closeStopModal()" class="bg-slate-800 text-slate-300 font-bold py-2.5 px-4 rounded-xl text-sm">Đóng</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 2: DÁN NHIỀU ĐỊA CHỈ CÙNG LÚC -->
-  <div id="bulkModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-4 space-y-3">
+    <div class="space-y-1">
       <div class="flex items-center justify-between">
-        <h3 class="font-extrabold text-sm text-white">📋 Nhập danh sách địa chỉ hàng loạt</h3>
-        <button onclick="document.getElementById('bulkModal').classList.add('hidden')" class="text-slate-400">✕</button>
+        <span id="activeStopBadge" class="text-[10px] font-extrabold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">ĐIỂM DỪNG #1</span>
+        <span id="execStopEta" class="text-[11px] text-amber-300 font-semibold">⏰ Đến lúc: --:--</span>
       </div>
-      <p class="text-xs text-slate-400">Mỗi dòng 1 địa chỉ tại Úc (hỗ trợ copy từ tin nhắn, ghi chú hoặc Excel):</p>
-      <textarea id="bulkTextarea" rows="5" placeholder="16 Williamson Rd, Ingleburn NSW&#10;159 Church St, Parramatta NSW&#10;345 Victoria Ave, Chatswood NSW" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-white"></textarea>
-      <button onclick="processBulkAddresses()" id="bulkSubmitBtn" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl text-sm">
-        Tìm & Thêm tất cả vào Tmap
+      <h3 id="execStopName" class="text-sm font-extrabold text-white truncate">Đang tải...</h3>
+      <div class="text-[11px] text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 truncate">
+        📝 Ghi chú: <span id="execNotes">Không có</span>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="stepActiveStop(-1)" class="bg-slate-800 text-slate-300 px-3 py-2.5 rounded-xl text-xs font-bold">◀ Trước</button>
+      <button onclick="completeCurrentStop('done')" class="flex-1 bg-emerald-600 text-white font-extrabold py-2.5 rounded-xl shadow text-xs flex items-center justify-center gap-1">
+        ✅ ĐÃ GIAO XONG (TIẾP)
       </button>
+      <button onclick="stepActiveStop(1)" class="bg-slate-800 text-slate-300 px-3 py-2.5 rounded-xl text-xs font-bold">Tiếp ▶</button>
     </div>
   </div>
 
-  <!-- MODAL 3: CÀI ĐẶT TÀI XẾ -->
-  <div id="settingsModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-4 space-y-3 text-xs">
+  <!-- ==================== DRAWER QUẢN LÝ VÙNG CHẠY & CREATE ROUTE GIỐNG SPOKE ==================== -->
+  <div id="routesDrawer" class="hidden fixed inset-0 bg-black/80 z-50 flex flex-col justify-end">
+    <div class="bg-slate-900 w-full max-h-[85vh] rounded-t-3xl border-t border-slate-700 p-4 flex flex-col shadow-2xl animate-in slide-in-from-bottom">
+      
+      <!-- Thông tin tài khoản & Tiêu đề -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-extrabold text-white text-base">TN</div>
+          <div>
+            <h3 class="font-extrabold text-sm text-white">Thắng Nguyễn</h3>
+            <p class="text-[10px] text-emerald-400">Tmap Standard • Úc Active</p>
+          </div>
+        </div>
+        <button onclick="closeRoutesDrawer()" class="text-slate-400 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <!-- Danh sách các vùng / tuyến đường đã tạo -->
+      <div class="flex-1 overflow-y-auto py-3 space-y-2.5" id="routesListContainer">
+        <!-- Render bằng JS -->
+      </div>
+
+      <!-- Nút + CREATE ROUTE CHUẨN SPOKE -->
+      <div class="pt-2 border-t border-slate-800">
+        <button onclick="openCreateRouteModal()" class="w-full bg-blue-600 active:bg-blue-700 text-white font-extrabold py-3.5 px-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 text-sm">
+          + Create route
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TẠO VÙNG CHẠY MỚI (CREATE ROUTE MODAL) -->
+  <div id="createRouteModal" class="hidden fixed inset-0 bg-black/85 z-[60] flex items-center justify-center p-4">
+    <div class="bg-slate-900 w-full max-w-sm rounded-3xl border border-slate-700 p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h3 class="font-extrabold text-sm text-white">⚙️ Cài đặt Lộ trình Tmap</h3>
-        <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="text-slate-400">✕</button>
+        <h3 class="font-extrabold text-sm text-white">➕ Tạo vùng chạy mới (Create Route)</h3>
+        <button onclick="closeCreateRouteModal()" class="text-slate-400">✕</button>
       </div>
       <div>
-        <label class="text-slate-400 block mb-1">Thành phố / Bang tại Úc</label>
-        <select id="cityPreset" onchange="changeCity()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white">
-          <option value="sydney">📍 Sydney, NSW</option>
-          <option value="melbourne">📍 Melbourne, VIC</option>
-          <option value="brisbane">📍 Brisbane, QLD</option>
-          <option value="perth">📍 Perth, WA</option>
-          <option value="adelaide">📍 Adelaide, SA</option>
+        <label class="text-slate-400 block mb-1.5 text-xs">Tên vùng / Suburb tại Úc (VD: Minto, Macquarie, Campbelltown...)</label>
+        <input id="newRouteNameInput" type="text" placeholder="Nhập tên vùng giao hàng..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+      </div>
+      <div>
+        <label class="text-slate-400 block mb-1.5 text-xs">Chọn thành phố trung tâm</label>
+        <select id="newRouteCitySelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white">
+          <option value="sydney">Sydney, NSW</option>
+          <option value="melbourne">Melbourne, VIC</option>
+          <option value="brisbane">Brisbane, QLD</option>
+          <option value="perth">Perth, WA</option>
         </select>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="text-slate-400 block mb-1">Ứng dụng dẫn đường mặc định</label>
-          <select id="navAppSelect" onchange="saveSettings()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white">
-            <option value="gmaps">Google Maps</option>
-            <option value="waze">Waze Navigation</option>
-          </select>
-        </div>
-        <div>
-          <label class="text-slate-400 block mb-1">Thời gian dừng mỗi điểm (phút)</label>
-          <input id="serviceTimeInput" type="number" value="5" onchange="saveSettings()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white" />
-        </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveNewRoute()" class="flex-1 bg-blue-600 active:bg-blue-700 text-white font-extrabold py-3 rounded-xl text-xs shadow">Tạo vùng mới</button>
+        <button onclick="closeCreateRouteModal()" class="bg-slate-800 text-slate-300 font-bold py-3 px-4 rounded-xl text-xs">Hủy</button>
       </div>
-      <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm mt-2">
-        Hoàn tất
-      </button>
     </div>
   </div>
 
-  <script>
-    const CITIES = {
-      sydney: { lat: -33.8688, lng: 151.2093, zoom: 11, samples: [
-        { name: "Kho xuất phát: Alexandria Depot, NSW", lat: -33.9096, lng: 151.1924, priority: "normal", place: "Kho chính", window: "08:00", notes: "Kiểm tra đủ 5 kiện hàng" },
-        { name: "Sydney Fish Market, Pyrmont NSW", lat: -33.8727, lng: 151.1927, priority: "asap", place: "Ghế phụ", window: "Trước 10:30", notes: "Hàng tươi sống - giao gấp cửa sau", phone: "0412345678" },
-        { name: "Marrickville Metro, Smidmore St NSW", lat: -33.9048, lng: 151.1613, priority: "normal", place: "Thùng sau", window: "09:00 - 14:00", notes: "Quầy lễ tân tầng trệt" },
-        { name: "Newtown King Street, NSW", lat: -33.8972, lng: 151.1793, priority: "normal", place: "Kệ trái", window: "Cả ngày", notes: "Để trước hiên nhà nếu vắng" },
-        { name: "Chatswood Chase, Victoria Ave NSW", lat: -33.7960, lng: 151.1860, priority: "normal", place: "Thùng sau", window: "11:00 - 16:00", notes: "Hầm Loading Dock B" },
-        { name: "Bondi Junction Westfield, NSW", lat: -33.8916, lng: 151.2507, priority: "normal", place: "Cốp xe", window: "Cả ngày", notes: "Gọi khách trước 5 phút" }
-      ]},
-      melbourne: { lat: -37.8136, lng: 144.9631, zoom: 11, samples: [
-        { name: "Kho Tmap: Port Melbourne, VIC", lat: -37.8340, lng: 144.9350, priority: "normal", place: "Kho", window: "08:00", notes: "Điểm xuất phát" },
-        { name: "Queen Victoria Market, VIC", lat: -37.8076, lng: 144.9568, priority: "asap", place: "Ghế phụ", window: "08:30 - 11:00", notes: "Giao cổng Peel St" },
-        { name: "Footscray Market, VIC", lat: -37.8012, lng: 144.9028, priority: "normal", place: "Thùng sau", window: "Cả ngày", notes: "" },
-        { name: "St Kilda Esplanade, VIC", lat: -37.8675, lng: 144.9740, priority: "normal", place: "Cốp xe", window: "Cả ngày", notes: "" }
-      ]},
-      brisbane: { lat: -27.4698, lng: 153.0251, zoom: 11, samples: [
-        { name: "Kho Tmap: Woolloongabba, QLD", lat: -27.4910, lng: 153.0380, priority: "normal", place: "Kho", window: "08:00", notes: "" },
-        { name: "Queen Street Mall, Brisbane CBD", lat: -27.4698, lng: 153.0251, priority: "asap", place: "Ghế phụ", window: "Trước 11:00", notes: "" },
-        { name: "Toowong Village, QLD", lat: -27.4852, lng: 152.9926, priority: "normal", place: "Thùng sau", window: "Cả ngày", notes: "" }
-      ]},
-      perth: { lat: -31.9505, lng: 115.8605, zoom: 11, samples: [
-        { name: "Kho Tmap: Welshpool Depot, WA", lat: -31.9880, lng: 115.9320, priority: "normal", place: "Kho", window: "08:00", notes: "" },
-        { name: "Perth CBD Hay Street, WA", lat: -31.9535, lng: 115.8570, priority: "normal", place: "Thùng sau", window: "Cả ngày", notes: "" }
-      ]},
-      adelaide: { lat: -34.9285, lng: 138.6007, zoom: 11, samples: [
-        { name: "Kho Tmap: Mile End, SA", lat: -34.9260, lng: 138.5720, priority: "normal", place: "Kho", window: "08:00", notes: "" },
-        { name: "Rundle Mall, Adelaide CBD", lat: -34.9229, lng: 138.6042, priority: "normal", place: "Thùng sau", window: "Cả ngày", notes: "" }
-      ]}
-    };
+  <!-- CÁC MODAL PHỤ (Sửa điểm, Dán hàng loạt) -->
+  <div id="stopModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-end justify-center">
+    <div class="bg-slate-900 w-full max-w-md rounded-t-2xl border-t border-slate-700 p-4 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2"><h3 class="font-extrabold text-xs text-white" id="modalStopTitle">Chi tiết điểm</h3><button onclick="closeStopModal()" class="text-slate-400">✕</button></div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div><label class="text-slate-400 block mb-1">Độ ưu tiên</label><select id="modalPriority" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"><option value="normal">Bình thường</option><option value="asap">🔥 Gấp (Ưu tiên đầu)</option></select></div>
+        <div><label class="text-slate-400 block mb-1">SĐT khách</label><input id="modalPhone" type="tel" placeholder="0412..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white" /></div>
+      </div>
+      <div><label class="text-slate-400 block mb-1 text-xs">Ghi chú giao hàng</label><input id="modalNotes" type="text" placeholder="Mã cổng..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white" /></div>
+      <button onclick="saveStopModal()" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs">Lưu thay đổi</button>
+    </div>
+  </div>
 
-    let map = L.map('map', { zoomControl: false }).setView([CITIES.sydney.lat, CITIES.sydney.lng], CITIES.sydney.zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© Tmap Pro AU' }).addTo(map);
-
-    let stops = JSON.parse(localStorage.getItem('tmap_pro_stops') || '[]');
-    let markers = [];
-    let routeLayer = null;
-    let activeLegLayer = null;
-    let totalKm = '0.0';
-    let totalMins = 0;
-    let isOptimized = false;
-    let isRunningRoute = false;
-    let activeStopIndex = 1;
-    let editingStopIndex = null;
-    let autocompleteTimer = null;
-
-    // Chạm bản đồ để ghim địa chỉ mới
-    map.on('click', async function(e) {
-      if (isRunningRoute) return;
-      const { lat, lng } = e.latlng;
-      let label = `Điểm ghim (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        const data = await res.json();
-        if (data && data.display_name) label = data.display_name.split(',').slice(0, 3).join(',');
-      } catch (err) {}
-      addStopObj({ name: label, lat, lng });
-    });
-
-    // Gợi ý địa chỉ trực tiếp khi gõ (Live Autocomplete tại Úc)
-    function handleAutocomplete(val) {
-      clearTimeout(autocompleteTimer);
-      const box = document.getElementById('suggestionsBox');
-      if (!val || val.trim().length < 3) {
-        box.classList.add('hidden');
-        return;
-      }
-      autocompleteTimer = setTimeout(async () => {
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&limit=5&addressdetails=1&q=${encodeURIComponent(val.trim())}`;
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            box.innerHTML = '';
-            data.forEach(item => {
-              const shortTitle = item.display_name.split(',').slice(0, 4).join(',');
-              const div = document.createElement('div');
-              div.className = 'p-2.5 hover:bg-slate-800 active:bg-slate-800 cursor-pointer text-xs text-slate-200 flex items-center gap-2';
-              div.innerHTML = `<span class="text-cyan-400">📍</span> <span class="truncate">${shortTitle}</span>`;
-              div.onclick = () => {
-                addStopObj({ name: shortTitle, lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
-                map.setView([parseFloat(item.lat), parseFloat(item.lon)], 15);
-                document.getElementById('addressInput').value = '';
-                box.classList.add('hidden');
-              };
-              box.appendChild(div);
-            });
-            box.classList.remove('hidden');
-          } else {
-            box.classList.add('hidden');
-          }
-        } catch (err) {}
-      }, 320);
-    }
-
-    function hideSuggestions() {
-      setTimeout(() => document.getElementById('suggestionsBox').classList.add('hidden'), 200);
-    }
-
-    async function searchAddress() {
-      const input = document.getElementById('addressInput');
-      const query = input.value.trim();
-      if (!query) return;
-      document.getElementById('suggestionsBox').classList.add('hidden');
-      const btn = document.getElementById('addBtn');
-      btn.innerText = '...';
-      try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&limit=1&q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data && data.length > 0) {
-          const item = data[0];
-          const shortName = item.display_name.split(',').slice(0, 3).join(',');
-          addStopObj({ name: shortName, lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
-          map.setView([parseFloat(item.lat), parseFloat(item.lon)], 15);
-          input.value = '';
-          input.blur();
-        } else {
-          alert('Không tìm thấy địa chỉ này tại Úc.');
-        }
-      } catch (e) {
-        alert('Lỗi kết nối mạng.');
-      }
-      btn.innerText = '+ Thêm';
-    }
-
-    function addStopObj({ name, lat, lng, priority = 'normal', place = 'Thùng sau', window = 'Cả ngày', notes = '', phone = '' }) {
-      stops.push({
-        id: Date.now() + Math.random(),
-        name, lat, lng,
-        priority, place, window, notes, phone,
-        status: 'pending', // pending | done | failed
-        eta: '--:--',
-        legMins: 6
-      });
-      isOptimized = false;
-      updateMainActionBtn();
-      saveAndRender();
-    }
-
-    function useMyGPS() {
-      if (!navigator.geolocation) return alert('Thiết bị chưa bật GPS.');
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        let name = "📍 Vị trí GPS của tôi";
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-          const data = await res.json();
-          if (data && data.display_name) name = "📍 GPS: " + data.display_name.split(',').slice(0, 2).join(',');
-        } catch (e) {}
-        stops.unshift({
-          id: Date.now(), name, lat: latitude, lng: longitude,
-          priority: 'normal', place: 'Kho xuất phát', window: 'Bây giờ', notes: 'Điểm xuất phát GPS', phone: '',
-          status: 'pending', eta: formatTime(new Date()), legMins: 0
-        });
-        isOptimized = false;
-        map.setView([latitude, longitude], 14);
-        updateMainActionBtn();
-        saveAndRender();
-      }, () => alert('Hãy bật quyền Vị trí (Location) cho ứng dụng Tmap.'));
-    }
-
-    // TỐI ƯU HÓA LỘ TRÌNH + TÍNH ETA TỪNG ĐIỂM + ƯU TIÊN ĐƠN GẤP (ASAP)
-    async function optimizeRoute() {
-      if (stops.length < 2) return alert('Cần ít nhất 2 điểm dừng để tối ưu lộ trình!');
-      const btn = document.getElementById('optimizeBtn');
-      btn.innerText = '⏳ ĐANG TÍNH LỘ TRÌNH...';
-
-      const coords = stops.map(s => `${s.lng},${s.lat}`).join(';');
-      const roundtrip = document.getElementById('roundTripToggle').checked;
-      const destParam = roundtrip ? 'any' : 'last';
-      const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=${roundtrip}&source=first&destination=${destParam}&geometries=geojson&overview=full`;
-
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.code === 'Ok' && data.trips && data.trips.length > 0) {
-          const trip = data.trips[0];
-          let reordered = new Array(stops.length);
-          data.waypoints.forEach((wp, origIdx) => {
-            reordered[wp.waypoint_index] = stops[origIdx];
-          });
-
-          // Đưa các đơn GẤP (ASAP) lên ngay sau Kho xuất phát giống Spoke Priority
-          const depot = reordered[0];
-          const asapStops = reordered.slice(1).filter(s => s.priority === 'asap');
-          const normalStops = reordered.slice(1).filter(s => s.priority !== 'asap');
-          stops = [depot, ...asapStops, ...normalStops];
-
-          // Tính giờ đến dự kiến (ETA) cho từng điểm
-          const serviceMins = parseInt(document.getElementById('serviceTimeInput').value || '5', 10);
-          let cursorTime = new Date();
-          stops[0].eta = formatTime(cursorTime);
-
-          const legs = trip.legs || [];
-          for (let i = 1; i < stops.length; i++) {
-            const legSec = legs[i - 1] ? legs[i - 1].duration : 360;
-            const driveMins = Math.max(2, Math.round(legSec / 60));
-            stops[i].legMins = driveMins;
-            cursorTime = new Date(cursorTime.getTime() + (driveMins + serviceMins) * 60000);
-            stops[i].eta = formatTime(cursorTime);
-          }
-
-          if (routeLayer) map.removeLayer(routeLayer);
-          routeLayer = L.geoJSON(trip.geometry, {
-            style: { color: '#06b6d4', weight: 5, opacity: 0.85 }
-          }).addTo(map);
-          map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
-
-          totalKm = (trip.distance / 1000).toFixed(1);
-          totalMins = Math.round(trip.duration / 60) + (stops.length - 1) * serviceMins;
-
-          isOptimized = true;
-          updateMainActionBtn();
-          saveAndRender();
-        } else {
-          alert('Không tìm được đường lái xe giữa các điểm này.');
-        }
-      } catch (err) {
-        alert('Lỗi kết nối máy chủ định tuyến.');
-      }
-      btn.innerText = '🔄 TỐI ƯU LẠI';
-    }
-
-    function updateMainActionBtn() {
-      const startBtn = document.getElementById('startRouteBtn');
-      const optBtn = document.getElementById('optimizeBtn');
-      if (isOptimized && stops.length >= 2) {
-        startBtn.classList.remove('hidden');
-        optBtn.innerText = '🔄 TỐI ƯU LẠI';
-        optBtn.className = 'w-1/3 bg-slate-800 border border-slate-700 text-slate-200 font-bold py-3.5 px-2 rounded-xl text-xs';
-      } else {
-        startBtn.classList.add('hidden');
-        optBtn.innerText = '⚡ TỐI ƯU LỘ TRÌNH TMAP NGAY';
-        optBtn.className = 'w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-extrabold py-3.5 px-4 rounded-xl shadow-lg text-sm';
-      }
-    }
-
-    // ==================== BẮT ĐẦU CHẠY LỘ TRÌNH (ACTIVE EXECUTION MODE) ====================
-    function startActiveRoute() {
-      if (stops.length < 2) return;
-      isRunningRoute = true;
-      // Tìm điểm đầu tiên chưa giao (bỏ qua kho số 0)
-      const firstPending = stops.findIndex((s, idx) => idx > 0 && s.status === 'pending');
-      activeStopIndex = firstPending !== -1 ? firstPending : 1;
-
-      document.getElementById('searchBarContainer').classList.add('hidden');
-      document.getElementById('sampleBtn').classList.add('hidden');
-      document.getElementById('planningPanel').classList.add('hidden');
-      document.getElementById('executionPanel').classList.remove('hidden');
-      document.getElementById('activeProgressBanner').classList.remove('hidden');
-
-      setTimeout(() => {
-        map.invalidateSize();
-        renderActiveStopCard();
-      }, 100);
-    }
-
-    function stopActiveRoute() {
-      isRunningRoute = false;
-      if (activeLegLayer) { map.removeLayer(activeLegLayer); activeLegLayer = null; }
-      document.getElementById('searchBarContainer').classList.remove('hidden');
-      document.getElementById('sampleBtn').classList.remove('hidden');
-      document.getElementById('planningPanel').classList.remove('hidden');
-      document.getElementById('executionPanel').classList.add('hidden');
-      document.getElementById('activeProgressBanner').classList.add('hidden');
-      setTimeout(() => {
-        map.invalidateSize();
-        if (routeLayer) map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
-        saveAndRender();
-      }, 100);
-    }
-
-    function stepActiveStop(delta) {
-      const next = activeStopIndex + delta;
-      if (next >= 0 && next < stops.length) {
-        activeStopIndex = next;
-        renderActiveStopCard();
-      }
-    }
-
-    function renderActiveStopCard() {
-      const s = stops[activeStopIndex];
-      if (!s) return;
-
-      const doneCount = stops.slice(1).filter(x => x.status !== 'pending').length;
-      const totalDeliveries = Math.max(1, stops.length - 1);
-      const lastEta = stops[stops.length - 1]?.eta || '--:--';
-      document.getElementById('progressStats').innerText = `Đã xong: ${doneCount}/${totalDeliveries} điểm • Dự kiến xong: ${lastEta}`;
-
-      document.getElementById('activeStopBadge').innerText = activeStopIndex === 0
-        ? `KHO XUẤT PHÁT (DEPOT)`
-        : `ĐIỂM DỪNG #${activeStopIndex} / ${stops.length - 1}`;
-
-      document.getElementById('execStopName').innerText = s.name;
-      document.getElementById('execStopEta').innerText = `⏰ Đến lúc: ${s.eta || '--:--'} • Lái xe ~${s.legMins || 5}p`;
-      document.getElementById('execPriority').innerText = s.priority === 'asap' ? '🔥 Gấp (ASAP)' : 'Bình thường';
-      document.getElementById('execPriority').className = s.priority === 'asap' ? 'font-bold text-rose-400' : 'font-bold text-emerald-400';
-      document.getElementById('execPlace').innerText = `📦 ${s.place || 'Thùng sau'}`;
-      document.getElementById('execWindow').innerText = s.window || 'Cả ngày';
-      document.getElementById('execNotesBox').innerText = `📝 Ghi chú: ${s.notes || 'Không có ghi chú đặc biệt'}`;
-
-      // Vẽ đường nối nổi bật từ điểm trước tới điểm hiện tại
-      if (activeLegLayer) map.removeLayer(activeLegLayer);
-      if (activeStopIndex > 0) {
-        const prev = stops[activeStopIndex - 1];
-        activeLegLayer = L.polyline([[prev.lat, prev.lng], [s.lat, s.lng]], {
-          color: '#10b981', weight: 6, dashArray: '8, 6'
-        }).addTo(map);
-        map.fitBounds(activeLegLayer.getBounds(), { padding: [55, 55], maxZoom: 15 });
-      } else {
-        map.setView([s.lat, s.lng], 15);
-      }
-
-      saveAndRender();
-    }
-
-    function launchNavigation() {
-      const s = stops[activeStopIndex];
-      if (!s) return;
-      const navApp = document.getElementById('navAppSelect').value;
-      if (navApp === 'waze') {
-        window.open(`https://waze.com/ul?ll=${s.lat},${s.lng}&navigate=yes`, '_blank');
-      } else {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`, '_blank');
-      }
-    }
-
-    function completeCurrentStop(statusType) {
-      stops[activeStopIndex].status = statusType; // 'done' hoặc 'failed'
-      // Tự động chuyển sang điểm dừng tiếp theo chưa giao
-      const nextIdx = stops.findIndex((item, idx) => idx > activeStopIndex && item.status === 'pending');
-      if (nextIdx !== -1) {
-        activeStopIndex = nextIdx;
-        renderActiveStopCard();
-      } else {
-        saveAndRender();
-        alert('🎉 Chúc mừng! Bạn đã hoàn thành toàn bộ lộ trình giao hàng trên Tmap!');
-        stopActiveRoute();
-      }
-    }
-
-    function callCustomer() {
-      const s = stops[activeStopIndex];
-      if (!s || !s.phone) return alert('Điểm dừng này chưa nhập số điện thoại khách. Bấm nút "✏️ Sửa" để thêm SĐT.');
-      window.open(`tel:${s.phone}`);
-    }
-
-    function smsCustomer() {
-      const s = stops[activeStopIndex];
-      const msg = encodeURIComponent(`Hi! Your Tmap driver is on the way to ${s.name} and will arrive around ${s.eta}.`);
-      window.open(`sms:${s.phone || ''}?body=${msg}`);
-    }
-
-    // ==================== CHỈNH SỬA CHI TIẾT ĐƠN & BULK IMPORT ====================
-    function openEditStopModal(idx) {
-      editingStopIndex = idx;
-      const s = stops[idx];
-      document.getElementById('modalStopTitle').innerText = `#${idx}: ${s.name}`;
-      document.getElementById('modalPriority').value = s.priority || 'normal';
-      document.getElementById('modalPackagePlace').value = s.place || 'Thùng sau';
-      document.getElementById('modalTimeWindow').value = s.window || '';
-      document.getElementById('modalPhone').value = s.phone || '';
-      document.getElementById('modalNotes').value = s.notes || '';
-      document.getElementById('stopModal').classList.remove('hidden');
-    }
-
-    function closeStopModal() {
-      document.getElementById('stopModal').classList.add('hidden');
-    }
-
-    function saveStopModal() {
-      if (editingStopIndex === null) return;
-      const s = stops[editingStopIndex];
-      s.priority = document.getElementById('modalPriority').value;
-      s.place = document.getElementById('modalPackagePlace').value;
-      s.window = document.getElementById('modalTimeWindow').value || 'Cả ngày';
-      s.phone = document.getElementById('modalPhone').value.trim();
-      s.notes = document.getElementById('modalNotes').value.trim();
-      closeStopModal();
-      if (isRunningRoute) renderActiveStopCard();
-      else saveAndRender();
-    }
-
-    function openBulkModal() {
-      document.getElementById('bulkModal').classList.remove('hidden');
-    }
-
-    async function processBulkAddresses() {
-      const raw = document.getElementById('bulkTextarea').value.trim();
-      if (!raw) return;
-      const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-      const btn = document.getElementById('bulkSubmitBtn');
-      btn.innerText = `⏳ Đang tìm ${lines.length} địa chỉ...`;
-
-      for (const line of lines) {
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=au&limit=1&q=${encodeURIComponent(line)}`;
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const item = data[0];
-            addStopObj({
-              name: item.display_name.split(',').slice(0, 3).join(','),
-              lat: parseFloat(item.lat),
-              lng: parseFloat(item.lon)
-            });
-          }
-        } catch (e) {}
-      }
-      btn.innerText = 'Tìm & Thêm tất cả vào Tmap';
-      document.getElementById('bulkTextarea').value = '';
-      document.getElementById('bulkModal').classList.add('hidden');
-    }
-
-    function openSettingsModal() {
-      document.getElementById('settingsModal').classList.remove('hidden');
-    }
-
-    function saveSettings() {
-      localStorage.setItem('tmap_nav_app', document.getElementById('navAppSelect').value);
-    }
-
-    function changeCity() {
-      const city = CITIES[document.getElementById('cityPreset').value];
-      map.setView([city.lat, city.lng], city.zoom);
-      loadSampleStops();
-    }
-
-    function loadSampleStops() {
-      stops = [];
-      isOptimized = false;
-      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-      const cityKey = document.getElementById('cityPreset').value;
-      CITIES[cityKey].samples.forEach(s => addStopObj(s));
-      updateMainActionBtn();
-      saveAndRender();
-    }
-
-    function removeStop(idx, ev) {
-      ev.stopPropagation();
-      stops.splice(idx, 1);
-      isOptimized = false;
-      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-      updateMainActionBtn();
-      saveAndRender();
-    }
-
-    function clearAllStops() {
-      stops = [];
-      totalKm = '0.0';
-      totalMins = 0;
-      isOptimized = false;
-      if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-      updateMainActionBtn();
-      saveAndRender();
-    }
-
-    function formatTime(dateObj) {
-      return dateObj.toTimeString().slice(0, 5);
-    }
-
-    function saveAndRender() {
-      localStorage.setItem('tmap_pro_stops', JSON.stringify(stops));
-      markers.forEach(m => map.removeLayer(m));
-      markers = [];
-
-      document.getElementById('summaryText').innerText = `${stops.length} điểm • ${totalKm} km • ~${totalMins} phút`;
-      const listEl = document.getElementById('stopsList');
-      listEl.innerHTML = '';
-
-      stops.forEach((s, idx) => {
-        const isDepot = idx === 0;
-        const isCurrentActive = isRunningRoute && idx === activeStopIndex;
-        let pinClass = 'stop-pin';
-        if (isDepot) pinClass += ' depot-pin';
-        else if (s.status === 'done') pinClass += ' done-pin';
-        else if (s.status === 'failed') pinClass += ' failed-pin';
-        else if (s.priority === 'asap') pinClass += ' asap-pin';
-        if (isCurrentActive) pinClass += ' active-pin';
-
-        const icon = L.divIcon({
-          className: '',
-          html: `<div class="${pinClass}">${isDepot ? 'T' : idx}</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
-        });
-
-        const marker = L.marker([s.lat, s.lng], { icon }).addTo(map);
-        marker.on('click', () => {
-          if (isRunningRoute) {
-            activeStopIndex = idx;
-            renderActiveStopCard();
-          } else {
-            openEditStopModal(idx);
-          }
-        });
-        markers.push(marker);
-
-        const statusBadge = s.status === 'done'
-          ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">✓ Đã giao</span>'
-          : (s.status === 'failed'
-            ? '<span class="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded font-bold">✕ Lỗi</span>'
-            : `<span class="text-[10px] text-cyan-400 font-semibold">ETA ${s.eta || '--:--'}</span>`);
-
-        const card = document.createElement('div');
-        card.className = `p-2.5 rounded-xl border ${s.status === 'done' ? 'bg-slate-900/40 border-slate-800 opacity-60' : 'bg-slate-800/90 border-slate-700'} flex items-center justify-between gap-2 cursor-pointer active:bg-slate-800`;
-        card.onclick = () => openEditStopModal(idx);
-        card.innerHTML = `
-          <div class="flex items-center gap-2.5 overflow-hidden">
-            <span class="${pinClass} shrink-0">${isDepot ? 'T' : idx}</span>
-            <div class="truncate">
-              <div class="flex items-center gap-1.5">
-                <span class="text-xs font-bold ${s.status === 'done' ? 'line-through text-slate-400' : 'text-white'} truncate">${s.name}</span>
-              </div>
-              <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
-                ${statusBadge}
-                ${s.priority === 'asap' ? '<span class="text-rose-400 font-bold">🔥 GẤP</span>' : ''}
-                <span>📦 ${s.place || 'Thùng sau'}</span>
-                ${s.notes ? `<span class="truncate text-amber-300">• ${s.notes}</span>` : ''}
-              </div>
-            </div>
-          </div>
-          <button onclick="removeStop(${idx}, event)" class="text-slate-400 hover:text-rose-400 px-2 py-1 text-xs shrink-0">✕</button>
-        `;
-        listEl.appendChild(card);
-      });
-    }
-
-    if (stops.length === 0) loadSampleStops();
-    else saveAndRender();
-  </script>
-</body>
-</html>
+  <div id="bulkModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+    <div class="bg
