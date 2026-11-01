@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#090d16">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Tmap Pro - Spoke Edition (Multi-language)</title>
+  <title>Tmap Pro - Spoke Fixed Edition</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { -webkit-tap-highlight-color: transparent; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #090d16; color: #f8fafc; }
-    #map { height: 100%; width: 100%; z-index: 1; }
+    * { box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #090d16; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .stop-pin {
       background: linear-gradient(135deg, #2563eb, #06b6d4);
       color: white; border-radius: 9999px;
@@ -27,29 +27,26 @@
     .failed-pin { background: #475569; opacity: 0.6; }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col">
+<body class="flex flex-col h-screen w-screen">
 
-  <!-- HEADER -->
-  <div id="appHeader" class="bg-slate-900 px-3 py-2.5 border-b border-slate-800 flex items-center justify-between shrink-0 z-30 shadow-md">
-    <div class="flex items-center gap-2 cursor-pointer" onclick="openRoutesDrawer()">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-extrabold text-white text-base shadow">T</div>
-      <div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-sm font-extrabold text-white truncate max-w-[130px]" id="currentRouteTitle">Macquarie</span>
+  <!-- HEADER CHUẨN SPOKE -->
+  <header id="appHeader" class="bg-slate-900 px-3 py-2.5 border-b border-slate-800 flex items-center justify-between shrink-0 z-30 shadow-md">
+    <div class="flex items-center gap-2.5 cursor-pointer" onclick="openRoutesDrawer()">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center font-extrabold text-white text-base shadow shrink-0">T</div>
+      <div class="overflow-hidden">
+        <div class="flex items-center gap-1">
+          <span class="text-sm font-extrabold text-white truncate max-w-[120px]" id="currentRouteTitle">Macquarie</span>
           <span class="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-bold" data-i18n="routesLabel">Vùng ▼</span>
         </div>
         <p class="text-[10px] text-emerald-400 font-semibold" id="summaryText">0 điểm • 0.0 km</p>
       </div>
     </div>
-    <div class="flex items-center gap-1.5">
-      <!-- Nút chuyển đổi ngôn ngữ EN / VI -->
-      <button onclick="toggleLanguage()" class="bg-slate-800 border border-slate-700 text-amber-400 px-2 py-1.5 rounded-lg text-xs font-extrabold" id="langToggleBtn">
-        🇻🇳 VIE
-      </button>
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button onclick="toggleLanguage()" class="bg-slate-800 border border-slate-700 text-amber-400 px-2 py-1.5 rounded-lg text-xs font-extrabold" id="langToggleBtn">🇻🇳 VIE</button>
       <button onclick="openRoutesDrawer()" class="bg-blue-600/20 border border-blue-500/40 text-blue-300 px-2.5 py-1.5 rounded-lg text-xs font-bold" data-i18n="routesBtn">📂 Tuyến</button>
-      <button onclick="useMyGPS()" class="bg-slate-800 border border-slate-700 text-cyan-400 px-2 py-1.5 rounded-lg text-xs font-bold">📍 GPS</button>
+      <button onclick="useMyGPS()" class="bg-slate-800 border border-slate-700 text-cyan-400 px-2.5 py-1.5 rounded-lg text-xs font-bold">📍 GPS</button>
     </div>
-  </div>
+  </header>
 
   <!-- Ô TÌM KIẾM ĐỊA CHỈ & AUTOCOMPLETE -->
   <div id="searchBarContainer" class="bg-slate-900 px-3 py-2 border-b border-slate-800 shrink-0 z-30 relative shadow-lg">
@@ -61,13 +58,73 @@
         <button onclick="document.getElementById('addressInput').value=''; hideSuggestions();" class="absolute right-2.5 top-2.5 text-slate-500 text-sm">✕</button>
       </div>
       <button onclick="searchAddress()" id="addBtn" class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-3 py-2.5 rounded-xl text-xs font-bold shrink-0 shadow" data-i18n="addBtn">+ Thêm</button>
-      <button onclick="openBulkModal()" class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-2.5 rounded-xl text-xs font-bold shrink-0" data-i18n="pasteBtn" title="Dán danh sách">📋 Dán</button>
+      <button onclick="openBulkModal()" class="bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-2.5 rounded-xl text-xs font-bold shrink-0" data-i18n="pasteBtn">📋 Dán</button>
     </div>
     <div id="suggestionsBox" class="hidden absolute left-3 right-3 top-13 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-52 overflow-y-auto z-50 divide-y divide-slate-800"></div>
   </div>
 
-  <!-- BẢN ĐỒ -->
-  <div class="relative flex-1 w-full">
-    <div id="map"></div>
+  <!-- BẢN ĐỒ CHIẾM KHÔNG GIAN LINH HOẠT (ĐÃ FIX LỖI MÀN HÌNH ĐEN) -->
+  <div class="relative flex-1 w-full min-h-[220px]">
+    <div id="map" class="absolute inset-0 w-full h-full"></div>
     <div id="activeProgressBanner" class="hidden absolute top-2 left-2 right-2 z-[400] bg-slate-900/95 border border-emerald-500/50 rounded-xl p-2.5 shadow-2xl flex items-center justify-between">
-      <div class="truncate pr
+      <div class="truncate pr-2">
+        <div class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wide" data-i18n="navActiveTitle">🧭 Tmap Active Navigation</div>
+        <div id="progressStats" class="text-xs text-white font-bold truncate">Đang tới điểm #1 • ETA --:--</div>
+      </div>
+      <button onclick="stopActiveRoute()" class="bg-rose-600 text-white px-3 py-1 rounded-lg text-xs font-bold shrink-0" data-i18n="exitBtn">Thoát</button>
+    </div>
+    <button id="sampleBtn" onclick="loadSampleStops()" class="absolute bottom-3 right-3 z-[400] bg-slate-900/90 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg" data-i18n="sampleBtn">
+      🔄 Nạp mẫu vùng này
+    </button>
+  </div>
+
+  <!-- BẢNG LẬP KẾ HOẠCH DƯỚI ĐÁY -->
+  <div id="planningPanel" class="h-[42%] bg-slate-900 border-t-2 border-slate-800 flex flex-col shrink-0 z-20 rounded-t-2xl shadow-2xl">
+    <div class="px-3.5 py-2 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
+      <span class="font-bold text-slate-200" data-i18n="stopsListTitle">Danh sách điểm dừng (Chạm để chỉnh sửa)</span>
+      <div class="flex items-center gap-3">
+        <label class="flex items-center gap-1 text-slate-300 cursor-pointer">
+          <input type="checkbox" id="roundTripToggle" checked onchange="isOptimized=false; updateMainActionBtn();" class="rounded bg-slate-800 text-blue-500" />
+          <span data-i18n="roundTrip">Khứ hồi</span>
+        </label>
+        <button onclick="clearAllStops()" class="text-rose-400 font-bold" data-i18n="clearAll">Xóa hết</button>
+      </div>
+    </div>
+    <div id="stopsList" class="flex-1 overflow-y-auto p-2.5 space-y-2"></div>
+    <div class="p-3 bg-slate-950 border-t border-slate-800 flex gap-2 shrink-0">
+      <button onclick="optimizeRoute()" id="optimizeBtn" class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-extrabold py-3.5 px-3 rounded-xl shadow-lg text-xs flex items-center justify-center gap-1.5" data-i18n="optimizeBtn">
+        ⚡ TỐI ƯU HÓA LỘ TRÌNH (TSP)
+      </button>
+      <button onclick="startActiveRoute()" id="startRouteBtn" class="hidden flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-extrabold py-3.5 px-3 rounded-xl shadow-lg text-xs animate-pulse flex items-center justify-center gap-1.5" data-i18n="startBtn">
+        🚀 BẮT ĐẦU CHẠY (START)
+      </button>
+    </div>
+  </div>
+
+  <!-- BẢNG ĐIỀU HƯỚNG TÀI XẾ (ACTIVE EXECUTION) -->
+  <div id="executionPanel" class="hidden h-[42%] bg-slate-900 border-t-2 border-emerald-500 flex flex-col justify-between shrink-0 z-20 rounded-t-2xl shadow-2xl p-3.5">
+    <div class="bg-slate-950 border border-emerald-500/40 rounded-xl p-2.5 flex items-center gap-3 shadow-inner shrink-0">
+      <div id="navTurnIcon" class="text-2xl shrink-0 bg-emerald-500/20 w-10 h-10 rounded-xl flex items-center justify-center">⬆️</div>
+      <div class="overflow-hidden">
+        <div id="navInstruction" class="text-xs font-bold text-emerald-400 truncate">Tiếp tục đi thẳng theo đường chính</div>
+        <div id="navSubInstruction" class="text-[10px] text-slate-400 truncate" data-i18n="navSub">Khoảng cách chặng tiếp theo: ~1.2 km</div>
+      </div>
+    </div>
+    <div class="space-y-1.5">
+      <div class="flex items-center justify-between">
+        <span id="activeStopBadge" class="text-[10px] font-extrabold text-cyan-400 bg-cyan-500/10 px-2.5 py-0.5 rounded-full">ĐIỂM DỪNG #1</span>
+        <span id="execStopEta" class="text-xs text-amber-300 font-bold">⏰ Đến lúc: --:--</span>
+      </div>
+      <h3 id="execStopName" class="text-sm font-extrabold text-white truncate">Đang tải...</h3>
+      <div class="grid grid-cols-2 gap-2 text-xs bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <div><span class="text-slate-400 text-[10px] block" data-i18n="packagePlaceTitle">VỊ TRÍ HÀNG TRÊN XE</span><span id="execPackagePlace" class="font-bold text-amber-300">📦 Thùng sau</span></div>
+        <div><span class="text-slate-400 text-[10px] block" data-i18n="notesTitle">GHI CHÚ / MÃ CỔNG</span><span id="execNotes" class="font-bold text-slate-200 truncate">Không có</span></div>
+      </div>
+    </div>
+    <div class="space-y-2 shrink-0">
+      <div class="flex gap-2">
+        <button onclick="stepActiveStop(-1)" class="bg-slate-800 text-slate-300 px-3.5 py-2.5 rounded-xl text-xs font-bold" data-i18n="prevBtn">◀ Trước</button>
+        <button onclick="completeCurrentStop('done')" class="flex-1 bg-emerald-600 active:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl shadow text-xs flex items-center justify-center gap-1.5" data-i18n="doneBtn">
+          ✅ ĐÃ GIAO XONG (TIẾP)
+        </button>
+        <button onclick="completeCurrentStop('failed')" class="bg-rose-600/20 border border-rose-500/40 text-rose-
