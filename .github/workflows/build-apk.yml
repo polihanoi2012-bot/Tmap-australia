@@ -1,0 +1,82 @@
+name: Build Tmap Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Tải mã nguồn Tmap từ Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Cài đặt Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 3. Cài đặt Java JDK 17 (Chuẩn cho Android Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. Đảm bảo thư mục www có chứa file index.html
+        run: |
+          mkdir -p www
+          if [ -f "index.html" ] && [ ! -f "www/index.html" ]; then
+            cp index.html www/index.html
+          fi
+
+      - name: 5. Khởi tạo dự án Capacitor Android cho Tmap
+        run: |
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Tmap" "au.com.tmap.routeplanner" --web-dir www
+          npx cap add android
+
+      - name: 6. Tự động tạo Logo Tmap làm Icon ứng dụng Android
+        run: |
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin
+          cat << 'EOF' > tmap-logo.svg
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <defs>
+              <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+            <rect width="512" height="512" rx="115" fill="url(#g)"/>
+            <path d="M256 76c-82 0-148 66-148 148 0 105 130 202 136 206a20 20 0 0 0 24 0c6-4 136-101 136-206 0-82-66-148-148-148z" fill="#ffffff"/>
+            <path d="M186 156h140v38h-48v104h-44V194h-48v-38z" fill="#1d4ed8"/>
+            <circle cx="356" cy="140" r="24" fill="#10b981"/>
+          </svg>
+          EOF
+          for dir in android/app/src/main/res/mipmap-*; do
+            if [ -d "$dir" ]; then
+              rsvg-convert -w 192 -h 192 tmap-logo.svg -o "$dir/ic_launcher.png" || true
+              rsvg-convert -w 192 -h 192 tmap-logo.svg -o "$dir/ic_launcher_round.png" || true
+              rsvg-convert -w 192 -h 192 tmap-logo.svg -o "$dir/ic_launcher_foreground.png" || true
+            fi
+          done
+
+      - name: 7. Cấp quyền Định vị GPS & Internet trong AndroidManifest.xml
+        run: |
+          sed -i 's/<application/<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" \/><uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" \/><application android:usesCleartextTraffic="true"/' android/app/src/main/AndroidManifest.xml
+
+      - name: 8. Đồng bộ dữ liệu và Biên dịch ra file APK
+        run: |
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../Tmap-Australia.apk
+
+      - name: 9. Xuất file Tmap-Australia.apk để tải về
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tmap-Android-APK
+          path: Tmap-Australia.apk
